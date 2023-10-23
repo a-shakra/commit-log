@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -73,7 +74,7 @@ func (s *httpServer) handleConsume(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	record, err := s.Log.Read(req.Offset)
-	if err == ErrOffsetNotFound {
+	if errors.Is(err, ErrOffsetNotFound) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
