@@ -35,12 +35,12 @@ func (s *StoreTestSuite) TearDownTest() {
 }
 
 func (s *StoreTestSuite) TestStoreAppend() {
-	appendToStore(s, 4)
+	s.appendToStore(4)
 }
 
 func (s *StoreTestSuite) TestStoreRead() {
 	toAppend := 4
-	appendToStore(s, toAppend)
+	s.appendToStore(toAppend)
 	var pos uint64
 	for i := 1; i < toAppend; i++ {
 		record, err := s.store.Read(pos)
@@ -58,7 +58,7 @@ func (s *StoreTestSuite) TestStoreReadEmptyThenFail() {
 
 func (s *StoreTestSuite) TestStoreReadAt() {
 	toAppend := 4
-	appendToStore(s, toAppend)
+	s.appendToStore(toAppend)
 
 	for i, offset := 1, 0; i < toAppend; i++ {
 		b := make([]byte, recordLenMetadataBytes)
@@ -86,7 +86,7 @@ func (s *StoreTestSuite) TestStoreReadAtEmptyThenFail() {
 
 func (s *StoreTestSuite) TestStoreClose() {
 	toAppend := 4
-	appendToStore(s, toAppend)
+	s.appendToStore(toAppend)
 
 	fInfo, err := os.Stat(s.store.file.Name())
 	s.Require().NoError(err)
@@ -100,7 +100,7 @@ func (s *StoreTestSuite) TestStoreClose() {
 	s.Require().True(newfSize > oldfSize)
 }
 
-func appendToStore(s *StoreTestSuite, recordsToAppend int) {
+func (s *StoreTestSuite) appendToStore(recordsToAppend int) {
 	for i := 1; i < recordsToAppend; i++ {
 		n, pos, err := s.store.Append(testRecord)
 		s.Require().NoError(err)
