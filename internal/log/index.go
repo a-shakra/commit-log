@@ -1,43 +1,33 @@
 package log
 
 import (
+	"errors"
+	"fmt"
 	"github.com/tysonmote/gommap"
-	"math"
 	"os"
 )
 
 var (
-	entryOffsetBytes         uint64 = 4
-	recordStorePosBytes      uint64 = 8
-	totalEntrySizeBytes             = entryOffsetBytes + recordStorePosBytes
-	defaultMaxIndexSizeBytes uint64 = math.MaxUint64
+	entryOffsetBytes    uint64 = 4
+	recordStorePosBytes uint64 = 8
+	totalEntrySizeBytes        = entryOffsetBytes + recordStorePosBytes
 )
 
 type index struct {
-	file              *os.File
-	mmap              gommap.MMap
-	size              uint64
-	maxIndexSizeBytes uint64
+	file         *os.File
+	mmap         gommap.MMap
+	size         uint64
+	maxSizeBytes uint64
 }
 
-func newIndex(f *os.File, opts ...IndexOption) (*index, error) {
-	var options options
-	for _, opt := range opts {
-		err := opt(&options)
-		if err != nil {
-			return nil, err
-		}
-	}
-	var maxSize uint64
-	if options.maxIndexSizeBytes == nil {
-		maxSize = defaultMaxIndexSizeBytes
-	} else {
-		maxSize = *options.maxIndexSizeBytes
+func newIndex(f *os.File, maxSize uint64) (*index, error) {
+	if maxSize == 0 {
+		return nil, errors.New("index max size should be a non-zero value")
 	}
 
 	idx := &index{
-		file:              f,
-		maxIndexSizeBytes: maxSize,
+		file:         f,
+		maxSizeBytes: maxSize,
 	}
 
 	fInfo, err := os.Stat(f.Name())
@@ -46,7 +36,7 @@ func newIndex(f *os.File, opts ...IndexOption) (*index, error) {
 	}
 
 	idx.size = uint64(fInfo.Size())
-	if err = os.Truncate(f.Name(), int64(idx.maxIndexSizeBytes)); err != nil {
+	if err = os.Truncate(f.Name(), int64(idx.maxSizeBytes)); err != nil {
 		return nil, err
 	}
 
@@ -93,7 +83,7 @@ func (i *index) Read(in int64) (offset uint32, position uint64, err error) {
 // with this index.
 func (i *index) Write(off uint32, pos uint64) error {
 	if uint64(len(i.mmap)) < i.size+totalEntrySizeBytes {
-		return ErrEndOfFile
+		return fmt.Errorf("index: %w", ErrFileFull)
 	}
 	encoding.PutUint32(i.mmap[i.size:i.size+entryOffsetBytes], off)
 	encoding.PutUint64(i.mmap[i.size+entryOffsetBytes:i.size+totalEntrySizeBytes], pos)
@@ -118,20 +108,4 @@ func (i *index) Close() error {
 	}
 
 	return i.file.Close()
-}
-
-type options struct {
-	maxIndexSizeBytes *uint64
-}
-
-// An IndexOption represents a function that can provide non-default configuration parameters
-// to an index object
-type IndexOption func(options *options) error
-
-// WithMaxIndexSize is a function that sets the maximum size of the index file
-func WithMaxIndexSize(size uint64) IndexOption {
-	return func(options *options) error {
-		options.maxIndexSizeBytes = &size
-		return nil
-	}
 }

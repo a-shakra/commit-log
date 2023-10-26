@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+var (
+	maxIndexTestSize = uint64(1024)
+)
+
 type IndexTestSuite struct {
 	suite.Suite
 	index *index
@@ -19,7 +23,7 @@ func (s *IndexTestSuite) SetupTest() {
 	f, err := os.CreateTemp("", "index_test_temp_file")
 	s.Require().NoError(err)
 
-	idx, err := newIndex(f, WithMaxIndexSize(1024))
+	idx, err := newIndex(f, maxIndexTestSize)
 	s.Require().NoError(err)
 	s.Require().Equal(f.Name(), idx.Name())
 	s.index = idx
@@ -56,7 +60,7 @@ func (s *IndexTestSuite) TestBuildIndexFromExistingFile() {
 	s.Require().NoError(err)
 
 	f, err := os.OpenFile(fName, os.O_RDWR, 0600)
-	idx, err := newIndex(f, WithMaxIndexSize(1024))
+	idx, err := newIndex(f, maxIndexTestSize)
 	s.Require().NoError(err)
 	s.index = idx
 

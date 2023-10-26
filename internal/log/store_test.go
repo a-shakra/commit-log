@@ -9,6 +9,7 @@ import (
 var (
 	testRecord          = []byte("test input")
 	expectedWriteLength = recordLenMetadataBytes + uint64(len(testRecord))
+	maxStoreTestSize    = uint64(1024)
 )
 
 type StoreTestSuite struct {
@@ -24,7 +25,7 @@ func (s *StoreTestSuite) SetupTest() {
 	f, err := os.CreateTemp("", "store_test_temp_file")
 	s.Require().NoError(err)
 
-	st, err := newStore(f)
+	st, err := newStore(f, maxStoreTestSize)
 	s.Require().NoError(err)
 	s.store = st
 }

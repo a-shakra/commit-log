@@ -4,35 +4,45 @@ import (
 	"bufio"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 )
 
 var (
-	encoding     = binary.BigEndian
-	ErrEndOfFile = errors.New("no record stored at this position")
+	encoding = binary.BigEndian
 )
 
 const recordLenMetadataBytes = 8
 
 type store struct {
-	file *os.File
-	mu   sync.Mutex
-	buf  *bufio.Writer
-	size uint64
+	file         *os.File
+	mu           sync.Mutex
+	buf          *bufio.Writer
+	size         uint64
+	maxSizeBytes uint64
 }
 
-func newStore(f *os.File) (*store, error) {
+func newStore(f *os.File, maxSize uint64) (*store, error) {
+	if maxSize == 0 {
+		return nil, errors.New("store max size should be a non-zero value")
+	}
+
 	fi, err := os.Stat(f.Name())
 	if err != nil {
 		return nil, err
 	}
 	size := uint64(fi.Size())
 	return &store{
-		file: f,
-		size: size,
-		buf:  bufio.NewWriter(f),
+		file:         f,
+		size:         size,
+		buf:          bufio.NewWriter(f),
+		maxSizeBytes: maxSize,
 	}, nil
+}
+
+func (s *store) Name() string {
+	return s.file.Name()
 }
 
 // Append returns three parameters.
@@ -42,6 +52,10 @@ func newStore(f *os.File) (*store, error) {
 func (s *store) Append(p []byte) (uint64, uint64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.size+uint64(len(p)) > s.maxSizeBytes {
+		return 0, 0, fmt.Errorf("store: %w", ErrFileFull)
+	}
 
 	if err := binary.Write(s.buf, encoding, uint64(len(p))); err != nil {
 		return 0, 0, err
