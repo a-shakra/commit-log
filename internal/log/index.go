@@ -93,7 +93,7 @@ func (i *index) Write(off uint32, pos uint64) error {
 
 // Close initiates a graceful shutdown of the index by adjusting
 // file size to include actual file contents and not the maximum
-// segment size that was originally configured for memory mapping
+// index size that was originally configured for memory mapping
 // purposes. A similar adjustment is made to the memory mapping
 // structure.
 func (i *index) Close() error {

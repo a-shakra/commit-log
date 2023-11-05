@@ -14,27 +14,6 @@ var (
 	defaultStoreSizeBytes        = defaultIndexSizeBytes * 15
 )
 
-type options struct {
-	maxIndexSizeBytes *uint64
-	maxStoreSizeBytes *uint64
-}
-
-type Options func(options *options) error
-
-func WithMaxIndexSize(size uint64) Options {
-	return func(options *options) error {
-		options.maxIndexSizeBytes = &size
-		return nil
-	}
-}
-
-func WithMaxStoreSize(size uint64) Options {
-	return func(options *options) error {
-		options.maxStoreSizeBytes = &size
-		return nil
-	}
-}
-
 type segment struct {
 	store             *store
 	index             *index
@@ -45,27 +24,20 @@ type segment struct {
 	isFull            bool
 }
 
-func newSegment(dir string, baseOffset uint64, opts ...Options) (*segment, error) {
-	var options options
-	for _, opt := range opts {
-		err := opt(&options)
-		if err != nil {
-			return nil, err
-		}
-	}
+func newSegment(dir string, baseOffset uint64, opts *segmentOptions) (*segment, error) {
 
 	var iSize uint64
-	if options.maxIndexSizeBytes == nil {
+	if opts.maxIndexSizeBytes == nil {
 		iSize = defaultIndexSizeBytes
 	} else {
-		iSize = *options.maxIndexSizeBytes
+		iSize = *opts.maxIndexSizeBytes
 	}
 
 	var sSize uint64
-	if options.maxStoreSizeBytes == nil {
+	if opts.maxStoreSizeBytes == nil {
 		sSize = defaultStoreSizeBytes
 	} else {
-		sSize = *options.maxStoreSizeBytes
+		sSize = *opts.maxStoreSizeBytes
 	}
 
 	s := &segment{

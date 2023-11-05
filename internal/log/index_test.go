@@ -6,10 +6,6 @@ import (
 	"testing"
 )
 
-var (
-	maxIndexTestSize = uint64(1024)
-)
-
 type IndexTestSuite struct {
 	suite.Suite
 	index *index
@@ -77,6 +73,23 @@ func (s *IndexTestSuite) TestReadEntryFromIndex() {
 	_, pos, err = s.index.Read(1)
 	s.Require().NoError(err)
 	s.Require().Equal(uint64(10), pos)
+}
+
+func (s *IndexTestSuite) TestIndexClose() {
+	// assert that file size doesn't change when new records are added
+	fInfo, err := os.Stat(s.index.file.Name())
+	s.Require().NoError(err)
+	preAppendFSize := fInfo.Size()
+	s.appendToIndex(4)
+	fInfo, err = os.Stat(s.index.file.Name())
+	postAppendFSize := fInfo.Size()
+	s.Require().Equal(preAppendFSize, postAppendFSize)
+	// assert that file size is truncated to true record length after records are added
+	err = s.index.Close()
+	s.Require().NoError(err)
+	fInfo, err = os.Stat(s.index.file.Name())
+	postCloseFSize := fInfo.Size()
+	s.Require().Greater(postAppendFSize, postCloseFSize)
 }
 
 // TODO appendToIndex should assign position in configurable way to prevent tight coupling with test functions

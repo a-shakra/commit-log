@@ -6,12 +6,6 @@ import (
 	"testing"
 )
 
-var (
-	testRecord          = []byte("test input")
-	expectedWriteLength = recordLenMetadataBytes + uint64(len(testRecord))
-	maxStoreTestSize    = uint64(1024)
-)
-
 type StoreTestSuite struct {
 	suite.Suite
 	store *store
