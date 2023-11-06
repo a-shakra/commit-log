@@ -10,6 +10,12 @@ import (
 	"sync"
 )
 
+var (
+	defaultIndexSizeBytes uint64 = 1024
+	defaultStoreSizeBytes        = defaultIndexSizeBytes * 15
+	defaultInitialOffset  uint64 = 0
+)
+
 // Log represents the entire write-ahead log store in the given directory.
 // It maintains a references to all segments that contain data and has
 // access to the current active segment that data will be written to
@@ -19,7 +25,7 @@ type Log struct {
 	Dir           string
 	activeSegment *segment
 	segments      []*segment
-	options       *options
+	options       options
 }
 
 // NewLog returns an instance of a Log object that contains
@@ -33,9 +39,20 @@ func NewLog(dir string, opts ...Options) (*Log, error) {
 			return nil, fmt.Errorf("error on log creation: %v", err)
 		}
 	}
+
+	if lOpts.segmentOptions.maxIndexSizeBytes == nil {
+		lOpts.segmentOptions.maxIndexSizeBytes = &defaultIndexSizeBytes
+	}
+	if lOpts.segmentOptions.maxStoreSizeBytes == nil {
+		lOpts.segmentOptions.maxStoreSizeBytes = &defaultStoreSizeBytes
+	}
+	if lOpts.segmentOptions.initialOffset == nil {
+		lOpts.segmentOptions.initialOffset = &defaultInitialOffset
+	}
+
 	l := &Log{
 		Dir:     dir,
-		options: &lOpts,
+		options: lOpts,
 	}
 
 	if err := l.setup(); err != nil {
@@ -112,7 +129,7 @@ func (l *Log) Read(off uint64) (*api.Record, error) {
 	}
 
 	if s == nil {
-		return nil, fmt.Errorf("offset is out of range: %d", off)
+		return nil, ErrOffsetOutOfRange{Offset: off}
 	}
 
 	rec, err := s.Read(off)

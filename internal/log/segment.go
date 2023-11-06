@@ -9,11 +9,6 @@ import (
 	"path"
 )
 
-var (
-	defaultIndexSizeBytes uint64 = 1024
-	defaultStoreSizeBytes        = defaultIndexSizeBytes * 15
-)
-
 type segment struct {
 	store             *store
 	index             *index

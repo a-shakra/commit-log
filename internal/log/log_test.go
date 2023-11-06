@@ -39,6 +39,14 @@ func (s *LogTestSuite) TestAppendAndRead() {
 	s.Require().Equal(testProtoRecord.Value, ret.Value)
 }
 
+func (s *LogTestSuite) TestReadOutOfRange() {
+	off, err := s.log.Append(testProtoRecord)
+	s.Require().NoError(err)
+	outOfRangeOff := off + 1
+	_, err = s.log.Read(outOfRangeOff)
+	s.Require().ErrorIs(err, ErrOffsetOutOfRange{Offset: outOfRangeOff})
+}
+
 func (s *LogTestSuite) TestInitClean() {
 	s.Require().Equal(1, len(s.log.segments))
 	s.Require().NotNil(s.log.activeSegment)
