@@ -3,10 +3,11 @@ package server
 import (
 	"context"
 	api "github.com/a-shakra/commit-log/api/v1"
+	"github.com/a-shakra/commit-log/internal/config"
 	"github.com/a-shakra/commit-log/internal/log"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 	"net"
 	"os"
@@ -32,9 +33,7 @@ func TestServerTestSuite(t *testing.T) {
 
 func (s *ServerTestSuite) SetupTest() {
 	// :0 -> means the port is automatically chosen
-	listener, err := net.Listen("tcp", ":0")
-	s.Require().NoError(err)
-
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	s.Require().NoError(err)
 
 	dir, err := os.MkdirTemp("", "server-test")
@@ -43,15 +42,29 @@ func (s *ServerTestSuite) SetupTest() {
 	wal, err := log.NewLog(dir)
 	s.Require().NoError(err)
 
-	server, err := NewGrpcServer(wal)
+	// setup server
+	serverTLSConfig, err := config.SetupTLSConfig(
+		config.TLSConfig{
+			CertFile:      config.ServerCertFile,
+			KeyFile:       config.ServerKeyFile,
+			CAFile:        config.CAFile,
+			ServerAddress: listener.Addr().String(),
+		})
+	s.Require().NoError(err)
+	serverCreds := credentials.NewTLS(serverTLSConfig)
+	server, err := NewGrpcServer(wal, grpc.Creds(serverCreds))
 	s.Require().NoError(err)
 
 	go func() {
 		server.Serve(listener)
 	}()
 
-	cOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	cconn, err := grpc.Dial(listener.Addr().String(), cOpts...)
+	// setup client
+	clientTlSConfig, err := config.SetupTLSConfig(config.TLSConfig{CAFile: config.CAFile})
+	s.Require().NoError(err)
+	clientCreds := credentials.NewTLS(clientTlSConfig)
+	cconn, err := grpc.Dial(listener.Addr().String(), grpc.WithTransportCredentials(clientCreds))
+	s.Require().NoError(err)
 	client := api.NewLogClient(cconn)
 
 	resources := serverOpenResources{

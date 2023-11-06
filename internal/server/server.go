@@ -22,8 +22,8 @@ type grpcServer struct {
 	log WriteAheadLog
 }
 
-func NewGrpcServer(log WriteAheadLog) (*grpc.Server, error) {
-	gServer := grpc.NewServer()
+func NewGrpcServer(log WriteAheadLog, opts ...grpc.ServerOption) (*grpc.Server, error) {
+	gServer := grpc.NewServer(opts...)
 	server, err := newGrpcServer(log)
 	if err != nil {
 		return nil, err
